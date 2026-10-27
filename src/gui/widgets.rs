@@ -37,6 +37,29 @@ fn paint_switch(ui: &Ui, rect: Rect, on: bool, hovered: bool, id: Id) {
     painter.circle_filled(Pos2::new(x, rect.center().y), knob_r, mix(theme::TEXT_DIM, Color32::WHITE, t));
 }
 
+/// The box and tick of a checkbox, `t` going from 0 (off) to 1 (on).
+fn paint_check(ui: &Ui, rect: Rect, t: f32, hovered: bool) {
+    let painter = ui.painter();
+    let radius = CornerRadius::same(5);
+    if hovered {
+        painter.rect_filled(rect, radius, theme::SURFACE_HI);
+    }
+    let (edge, on_fill) =
+        if hovered { (theme::TEXT_DIM, theme::ACCENT_HOVER) } else { (theme::TEXT_FAINT, theme::ACCENT) };
+    painter.rect(
+        rect,
+        radius,
+        mix(Color32::TRANSPARENT, on_fill, t),
+        Stroke::new(1.0, mix(edge, on_fill, t)),
+        StrokeKind::Inside,
+    );
+    if t > 0.0 {
+        let c = rect.center();
+        let check = vec![c + egui::vec2(-4.5, 0.2), c + egui::vec2(-1.3, 3.4), c + egui::vec2(4.8, -3.6)];
+        painter.line(check, Stroke::new(2.0, Color32::WHITE.gamma_multiply(t)));
+    }
+}
+
 /// A full-width row with a title, an optional subtitle and a switch; clicking anywhere on it
 /// toggles. Returns true when the value changed.
 pub fn toggle_row(ui: &mut Ui, on: &mut bool, title: &str, subtitle: Option<&str>) -> bool {
@@ -277,18 +300,7 @@ pub fn check_row(ui: &mut Ui, checked: &mut bool, label: &str, status: Option<(&
     }
     let t = ui.ctx().animate_bool_responsive(response.id, *checked);
     let bx = Rect::from_min_size(Pos2::new(rect.left(), rect.center().y - 9.0), Vec2::splat(18.0));
-    painter.rect(
-        bx,
-        CornerRadius::same(5),
-        mix(Color32::TRANSPARENT, theme::ACCENT, t),
-        Stroke::new(1.0, mix(theme::TEXT_FAINT, theme::ACCENT, t)),
-        StrokeKind::Inside,
-    );
-    if t > 0.0 {
-        let c = bx.center();
-        let check = vec![c + egui::vec2(-4.5, 0.2), c + egui::vec2(-1.3, 3.4), c + egui::vec2(4.8, -3.6)];
-        painter.line(check, Stroke::new(2.0, Color32::WHITE.gamma_multiply(t)));
-    }
+    paint_check(ui, bx, t, false);
 
     let mut text_right = rect.right();
     if let Some((status, color)) = status {
@@ -308,6 +320,26 @@ pub fn check_row(ui: &mut Ui, checked: &mut bool, label: &str, status: Option<(&
     let galley = painter.layout_job(job);
     painter.galley(Pos2::new(text_left, rect.center().y - galley.size().y / 2.0), galley, theme::TEXT);
     focus_ring(ui, &response, hover_rect, 6);
+    response.on_hover_cursor(CursorIcon::PointingHand);
+    clicked
+}
+
+/// A checkbox sized to its label, unlike `check_row`. Returns true on toggle.
+pub fn checkbox(ui: &mut Ui, checked: &mut bool, label: &str) -> bool {
+    let galley = ui.painter().layout_no_wrap(label.to_owned(), FontId::proportional(theme::SIZE_BODY), theme::TEXT);
+    let size = egui::vec2(18.0 + 12.0 + galley.size().x, 20.0);
+    let (rect, response) = ui.allocate_exact_size(size, Sense::click());
+    response.widget_info(|| WidgetInfo::selected(WidgetType::Checkbox, ui.is_enabled(), *checked, label));
+    let clicked = response.clicked();
+    if clicked {
+        *checked = !*checked;
+    }
+    let t = ui.ctx().animate_bool_responsive(response.id, *checked);
+    let bx = Rect::from_min_size(Pos2::new(rect.left(), rect.center().y - 9.0), Vec2::splat(18.0));
+    paint_check(ui, bx, t, response.hovered());
+    let pos = Pos2::new(bx.right() + 12.0, rect.center().y - galley.size().y / 2.0);
+    ui.painter().galley(pos, galley, theme::TEXT);
+    focus_ring(ui, &response, bx, 5);
     response.on_hover_cursor(CursorIcon::PointingHand);
     clicked
 }

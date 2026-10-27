@@ -36,6 +36,10 @@ doesn't mute. The speaker then gets out of sync and its play/pause button stops 
 To avoid that, AvrcpKeeper briefly reports \"paused\" after each press and then \"playing\" again. This sets how long \
 that moment lasts. Call audio may dip during it. Shorter feels snappier; if the button still stops responding, raise \
 it.";
+const HELP_SILENT: &str = "By default AvrcpKeeper only tells the speaker that something is playing, which is usually \
+enough. Turning this on also plays silence to the speaker while AvrcpKeeper is active. Try it if the speaker still \
+mutes during calls. Some speakers click or pop when the silence starts and stops.\n\n\
+Not used with Always, so your PC can still sleep.";
 const HELP_TRIGGER: &str = "AvrcpKeeper only tells the speaker that something is playing while this is true. \
 The rest of the time your speaker and media keys behave as usual.";
 const HELP_DEVICES: &str = "AvrcpKeeper is only active on these outputs. Bluetooth speakers stay listed while \
@@ -469,6 +473,17 @@ impl SettingsApp {
             if widgets::slider(ui, &mut self.config.resync_ms, range, 10, "Play/pause delay").changed() {
                 self.mark_dirty();
             }
+            let row = egui::vec2(ui.available_width(), 20.0);
+            ui.allocate_ui_with_layout(row, Layout::left_to_right(Align::Center), |ui| {
+                if widgets::checkbox(ui, &mut self.config.silent_stream, "Play silent audio") {
+                    self.mark_dirty();
+                }
+                widgets::help(ui, "Play silent audio", HELP_SILENT);
+                if self.config.trigger == Trigger::Always {
+                    let note = RichText::new("Not used with Always").size(theme::SIZE_SECONDARY);
+                    ui.label(note.color(theme::TEXT_FAINT));
+                }
+            });
         });
     }
 

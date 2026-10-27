@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- AvrcpKeeper no longer plays a silent audio stream by default. It caused a pop on some speakers when it started and stopped, and reporting "playing" was enough on the speaker I tested with. If your speaker mutes again after updating, turn on the new **Play silent audio** setting (`silent_stream = true`).
+- The default play/pause delay is now 150 ms (was 250 ms).
+
 ## 1.0.0
 
 First release.

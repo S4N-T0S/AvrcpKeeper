@@ -52,7 +52,21 @@ pub fn apply(ctx: &egui::Context) {
         style.spacing.button_padding = egui::vec2(14.0, 6.0);
         style.spacing.interact_size.y = 24.0;
         style.spacing.combo_height = 260.0;
-        style.spacing.scroll = ScrollStyle::solid();
+        // With this theme `solid()` paints the handle and track the same color. Keep its layout
+        // and draw the handle in a faint text color instead.
+        style.spacing.scroll = ScrollStyle {
+            floating: true,
+            floating_width: 6.0,
+            floating_allocated_width: 10.0,
+            foreground_color: true,
+            dormant_background_opacity: 1.0,
+            active_background_opacity: 1.0,
+            interact_background_opacity: 1.0,
+            dormant_handle_opacity: 0.25,
+            active_handle_opacity: 0.25,
+            interact_handle_opacity: 0.45,
+            ..ScrollStyle::solid()
+        };
 
         let v = &mut style.visuals;
         v.dark_mode = true;

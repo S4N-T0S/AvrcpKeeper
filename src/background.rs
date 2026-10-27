@@ -161,7 +161,11 @@ fn describe(cfg: &Config) -> String {
         Devices::All => "all".to_string(),
         Devices::Selected(ids) => format!("{} selected", ids.len()),
     };
-    format!("Trigger: {trigger}; outputs: {devices}; resync: {} ms.", cfg.resync_ms)
+    format!(
+        "Trigger: {trigger}; outputs: {devices}; resync: {} ms; silent stream: {}.",
+        cfg.resync_ms,
+        if cfg.silent_stream { "on" } else { "off" }
+    )
 }
 
 fn create_window() -> Result<HWND> {
@@ -534,20 +538,22 @@ impl State {
         match create_session(self.hwnd, self.thumbnail.as_ref()) {
             Ok((smtc, button_token)) => {
                 let mut keeper = Keeper { smtc, button_token, device_id, stream: None, stream_retry_at: None };
-                if let Some(id) = &keeper.device_id {
-                    let name = audio::device_name(en, id).unwrap_or_else(|| id.clone());
-                    match audio::SilentStream::start(en, id) {
-                        Ok(stream) => {
-                            keeper.stream = Some(stream);
-                            log!("Active, silent stream on {name}.");
-                        }
-                        Err(e) => {
-                            keeper.stream_retry_at = Some(Instant::now() + STREAM_RETRY);
-                            log!("Active on {name} without a silent stream ({}).", e.message());
+                match &keeper.device_id {
+                    Some(id) if self.config.silent_stream => {
+                        let name = audio::device_name(en, id).unwrap_or_else(|| id.clone());
+                        match audio::SilentStream::start(en, id) {
+                            Ok(stream) => {
+                                keeper.stream = Some(stream);
+                                log!("Active, silent stream on {name}.");
+                            }
+                            Err(e) => {
+                                keeper.stream_retry_at = Some(Instant::now() + STREAM_RETRY);
+                                log!("Active on {name} without a silent stream ({}).", e.message());
+                            }
                         }
                     }
-                } else {
-                    log!("Active.");
+                    Some(id) => log!("Active on {}.", audio::device_name(en, id).unwrap_or_else(|| id.clone())),
+                    None => log!("Active."),
                 }
                 self.keeper = Some(keeper);
                 self.rebuild = false;
@@ -581,10 +587,18 @@ impl State {
     }
 
     /// Keeps the silent stream topped up, and recreates it if it fails, without touching the
-    /// media session (so the speaker never sees "stopped" for a stream hiccup).
+    /// media session (so the speaker never sees "stopped" for a stream hiccup). Also starts or
+    /// stops it when the setting changes.
     fn maintain_stream(&mut self, en: &IMMDeviceEnumerator) {
         let Some(keeper) = &mut self.keeper else { return };
         let Some(device) = keeper.device_id.clone() else { return };
+        if !self.config.silent_stream {
+            keeper.stream_retry_at = None;
+            if keeper.stream.take().is_some() {
+                log!("Silent stream stopped.");
+            }
+            return;
+        }
         let now = Instant::now();
         if let Some(stream) = &keeper.stream {
             if stream.refill().is_err() {
@@ -601,6 +615,7 @@ impl State {
             Ok(stream) => {
                 keeper.stream = Some(stream);
                 keeper.stream_retry_at = None;
+                log!("Silent stream started.");
             }
             Err(e) => {
                 keeper.stream_retry_at = Some(now + STREAM_RETRY);

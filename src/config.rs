@@ -4,7 +4,7 @@ use std::ops::RangeInclusive;
 use std::path::{Path, PathBuf};
 
 pub const FILE_NAME: &str = "AvrcpKeeper.ini";
-pub const DEFAULT_RESYNC_MS: u32 = 250;
+pub const DEFAULT_RESYNC_MS: u32 = 150;
 pub const RESYNC_RANGE: RangeInclusive<u32> = 50..=2000;
 pub const DEFAULT_APPS: [&str; 3] = ["discord", "discordptb", "discordcanary"];
 
@@ -56,6 +56,8 @@ pub struct Config {
     pub apps: Vec<String>,
     pub devices: Devices,
     pub resync_ms: u32,
+    /// Play a silent stream on the output while the session is up.
+    pub silent_stream: bool,
     /// Write AvrcpKeeper.log next to the exe.
     pub log: bool,
 }
@@ -67,6 +69,7 @@ impl Default for Config {
             apps: DEFAULT_APPS.iter().map(|s| s.to_string()).collect(),
             devices: Devices::All,
             resync_ms: DEFAULT_RESYNC_MS,
+            silent_stream: false,
             log: false,
         }
     }
@@ -103,6 +106,11 @@ impl Config {
                         cfg.resync_ms = ms.clamp(*RESYNC_RANGE.start(), *RESYNC_RANGE.end());
                     }
                 }
+                "silent_stream" => {
+                    if let Some(on) = parse_bool(value) {
+                        cfg.silent_stream = on;
+                    }
+                }
                 "log" => {
                     if let Some(on) = parse_bool(value) {
                         cfg.log = on;
@@ -127,12 +135,15 @@ impl Config {
              ; devices: all, or a comma-separated list of audio endpoint IDs\n\
              devices = {}\n\
              resync_ms = {}\n\
+             ; silent_stream: true plays silence on the output while active\n\
+             silent_stream = {}\n\
              ; log: true writes AvrcpKeeper.log next to the exe\n\
              log = {}\n",
             self.trigger.as_str(),
             self.apps.join(", "),
             devices,
             self.resync_ms,
+            self.silent_stream,
             self.log
         )
     }
@@ -286,12 +297,13 @@ mod tests {
     #[test]
     fn parses_all_keys() {
         let cfg = Config::parse(&format!(
-            "trigger = any\napps = Spotify.exe, C:\\Games\\game.exe\ndevices = {JBL}\nresync_ms = 400\nlog = yes\n"
+            "trigger = any\napps = Spotify.exe, C:\\Games\\game.exe\ndevices = {JBL}\nresync_ms = 400\nsilent_stream = on\nlog = yes\n"
         ));
         assert_eq!(cfg.trigger, Trigger::AnyApp);
         assert_eq!(cfg.apps, vec!["spotify", "game"]);
         assert_eq!(cfg.devices, Devices::Selected(vec![JBL.to_string()]));
         assert_eq!(cfg.resync_ms, 400);
+        assert!(cfg.silent_stream);
         assert!(cfg.log);
     }
 
@@ -301,6 +313,12 @@ mod tests {
         assert!(!Config::parse("log = maybe\n").log);
         assert!(Config::parse("log = TRUE\n").log);
         assert!(!Config::parse("log = true\nlog = off\n").log);
+    }
+
+    #[test]
+    fn silent_stream_is_off_unless_enabled() {
+        assert!(!Config::default().silent_stream);
+        assert!(Config::parse("silent_stream = true\n").silent_stream);
     }
 
     #[test]
@@ -338,7 +356,8 @@ mod tests {
 
     #[test]
     fn round_trips() {
-        let mut cfg = Config { trigger: Trigger::Always, resync_ms: 300, log: true, ..Config::default() };
+        let mut cfg =
+            Config { trigger: Trigger::Always, resync_ms: 300, silent_stream: true, log: true, ..Config::default() };
         cfg.devices = Devices::Selected(vec![JBL.to_string()]);
         assert_eq!(Config::parse(&cfg.to_ini()), cfg);
         assert_eq!(Config::parse(&Config::default().to_ini()), Config::default());

@@ -31,7 +31,7 @@ I found and tested this on a JBL Flip, but any speaker that stops its output whe
 
 ## How it works
 
-Windows sends the speaker a play status over AVRCP (the Bluetooth remote-control profile), based on whichever media player is active. AvrcpKeeper registers its own media session and reports it as "playing" while the trigger is active (by default, Discord playing audio), with a silent audio stream underneath. The speaker sees "playing" and keeps its output on. Twenty seconds after the trigger goes quiet, the session is removed and everything goes back to normal.
+Windows sends the speaker a play status over AVRCP (the Bluetooth remote-control profile), based on whichever media player is active. AvrcpKeeper registers its own media session and reports it as "playing" while the trigger is active (by default, Discord playing audio). It doesn't play any sound of its own unless you turn on **Play silent audio**. The speaker sees "playing" and keeps its output on. Twenty seconds after the trigger goes quiet, the session is removed and everything goes back to normal.
 
 - **Media buttons still work.** While AvrcpKeeper is the active session, play/pause, next and previous from the speaker or keyboard go to the player you used last.
 - **Play/pause on the speaker stays in sync.** Some speakers track play/pause themselves, so after each press AvrcpKeeper reports "paused" for a moment and then "playing" again. That keeps the button working on every press. Call audio dips for that moment.
@@ -58,7 +58,8 @@ gh attestation verify AvrcpKeeper-<version>-windows-x64.zip -R S4N-T0S/AvrcpKeep
 | Setting | What it does |
 | --- | --- |
 | Start with Windows | Adds `AvrcpKeeper.exe --background` to your user's startup programs. |
-| Play/pause delay | How long the "paused" blip lasts after a play/pause press. 250 ms by default. If the speaker's button only works once and then stops responding, raise it. |
+| Play/pause delay | How long the "paused" blip lasts after a play/pause press. 150 ms by default. If the speaker's button only works once and then stops responding, raise it. |
+| Play silent audio | Also plays silence to the speaker while AvrcpKeeper is active. Off by default. Try it if the speaker still mutes during calls. Some speakers click or pop when the silence starts and stops. Not used with **Always**, so the PC can still sleep. |
 | Active when | **Selected apps** (Discord by default), **Any app** that is playing sound (system sounds are ignored), or **Always** while a selected output is connected. |
 | Output devices | **All outputs**, or only specific ones. Bluetooth speakers stay in the list while they're switched off, so you can pick yours before it connects. |
 
@@ -70,11 +71,12 @@ Settings are stored in `AvrcpKeeper.ini` next to the exe:
 trigger = apps
 apps = discord, discordptb, discordcanary
 devices = all
-resync_ms = 250
+resync_ms = 150
+silent_stream = false
 log = false
 ```
 
-`trigger` is `apps`, `any` or `always`. `apps` takes executable names with or without `.exe`. `devices` is `all` or a comma-separated list of audio endpoint IDs (the settings window fills these in for you). `log = true` writes `AvrcpKeeper.log` next to the exe (off by default). Once the log reaches 1 MB it replaces `AvrcpKeeper.log.old`, so there are never more than two log files.
+`trigger` is `apps`, `any` or `always`. `apps` takes executable names with or without `.exe`. `devices` is `all` or a comma-separated list of audio endpoint IDs (the settings window fills these in for you). `silent_stream = true` turns on **Play silent audio**. `log = true` writes `AvrcpKeeper.log` next to the exe (off by default). Once the log reaches 1 MB it replaces `AvrcpKeeper.log.old`, so there are never more than two log files.
 
 ## Command line
 
