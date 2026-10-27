@@ -1,0 +1,63 @@
+[package]
+name = "avrcpkeeper"
+version = "1.0.0"
+edition = "2021"
+rust-version = "1.85"
+description = "Keeps Bluetooth speakers that mute on AVRCP pause from swallowing call and game audio"
+license = "MIT"
+readme = "README.md"
+publish = false
+
+[[bin]]
+name = "AvrcpKeeper"
+path = "src/main.rs"
+
+[dependencies]
+eframe = { version = "0.32", default-features = false, features = ["glow", "default_fonts", "accesskit"] }
+# Not used directly: eframe opens links through it, and "hardened" limits that to http(s) URLs.
+webbrowser = { version = "1", default-features = false, features = ["hardened"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-future = "0.2"
+
+[target.'cfg(windows)'.dependencies.windows]
+version = "0.61"
+features = [
+    "Foundation",
+    "Foundation_Collections",
+    "Media",
+    "Media_Control",
+    "Storage_Streams",
+    "Win32_Devices_FunctionDiscovery",
+    "Win32_Foundation",
+    "Win32_Graphics_Dwm",
+    "Win32_Graphics_Gdi",
+    "Win32_Media_Audio",
+    "Win32_Media_Audio_Endpoints",
+    "Win32_Security",
+    "Win32_Security_Authorization",
+    "Win32_System_Com",
+    "Win32_System_Com_StructuredStorage",
+    "Win32_System_Console",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Power",
+    "Win32_System_Registry",
+    "Win32_System_SystemInformation",
+    "Win32_System_Threading",
+    "Win32_System_Variant",
+    "Win32_System_WinRT",
+    "Win32_UI_HiDpi",
+    "Win32_UI_Shell",
+    "Win32_UI_Shell_PropertiesSystem",
+    "Win32_UI_WindowsAndMessaging",
+]
+
+[target.'cfg(windows)'.build-dependencies]
+embed-resource = "3"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
