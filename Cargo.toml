@@ -1,6 +1,6 @@
 [package]
 name = "avrcpkeeper"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2021"
 rust-version = "1.85"
 description = "Keeps Bluetooth speakers that mute on AVRCP pause from swallowing call and game audio"
