@@ -13,7 +13,7 @@ name = "AvrcpKeeper"
 path = "src/main.rs"
 
 [dependencies]
-eframe = { version = "0.32", default-features = false, features = ["glow", "default_fonts", "accesskit"] }
+eframe = { version = "0.37", default-features = false, features = ["glow", "default_fonts", "accesskit"] }
 # Not used directly: eframe opens links through it, and "hardened" limits that to http(s) URLs.
 webbrowser = { version = "1", default-features = false, features = ["hardened"] }
 
